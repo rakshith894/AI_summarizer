@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Summarizer — Cut the noise. Keep the meaning.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#17171a;
+    --ink-2:#1e1e22;
+    --paper:#efeade;
+    --paper-dim:#e3ddcd;
+    --text:#eeeae0;
+    --text-dim:#9a958a;
+    --highlight:#f2b83c;
+    --highlight-dim:#7a6329;
+    --redline:#c1443d;
+    --line:#38373a;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--ink);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit;}
+  ::selection{background:var(--highlight);color:var(--ink);}
+
+  .wrap{max-width:920px;margin:0 auto;padding:0 24px;}
+
+  /* animated drifting gradient backdrop */
+  body::before{
+    content:"";
+    position:fixed;inset:-10%;
+    pointer-events:none;
+    background:
+      radial-gradient(ellipse 60% 50% at var(--bx1,20%) var(--by1,-10%), rgba(242,184,60,0.14), transparent 60%),
+      radial-gradient(ellipse 55% 45% at var(--bx2,90%) var(--by2,20%), rgba(193,68,61,0.12), transparent 60%),
+      radial-gradient(ellipse 50% 60% at var(--bx3,40%) var(--by3,100%), rgba(242,184,60,0.08), transparent 55%);
+    z-index:0;
+    animation: drift 22s ease-in-out infinite alternate;
+    filter:blur(10px);
+  }
+  @keyframes drift{
+    0%{
+      --bx1:15%; --by1:-15%;
+      --bx2:95%; --by2:10%;
+      --bx3:35%; --by3:105%;
+    }
+    50%{
+      --bx1:35%; --by1:5%;
+      --bx2:70%; --by2:45%;
+      --bx3:60%; --by3:80%;
+    }
+    100%{
+      --bx1:10%; --by1:15%;
+      --bx2:100%; --by2:0%;
+      --bx3:50%; --by3:110%;
+    }
+  }
+
+  /* NAV */
+  nav{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:22px 24px;
+    max-width:920px;margin:0 auto;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:13px;
+    letter-spacing:0.04em;
+    position:relative;z-index:1;
+  }
+  .brand{display:flex;align-items:center;gap:8px;color:var(--text);text-decoration:none;}
+  .brand-mark{
+    width:9px;height:9px;border-radius:50%;
+    background:var(--highlight);
+    box-shadow:0 0 0 3px rgba(242,184,60,0.15);
+  }
+  nav .cta{
+    color:var(--ink);
+    background:var(--highlight);
+    padding:8px 14px;
+    border-radius:999px;
+    text-decoration:none;
+    font-weight:500;
+    transition:transform .15s ease, background .15s ease;
+  }
+  nav .cta:hover{background:#ffcb5e;transform:translateY(-1px);}
+  nav .cta:focus-visible{outline:2px solid var(--text);outline-offset:2px;}
+
+  /* HERO */
+  header.hero{
+    padding:64px 0 40px;
+    position:relative;z-index:1;
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--redline);
+    display:flex;align-items:center;gap:10px;
+    margin-bottom:22px;
+  }
+  .eyebrow::before{content:"";width:22px;height:1px;background:var(--redline);}
+
+  h1{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    font-size:clamp(2.4rem, 6vw, 4.4rem);
+    line-height:1.02;
+    letter-spacing:-0.01em;
+    margin:0 0 22px;
+  }
+  h1 em{
+    font-style:italic;
+    font-weight:500;
+    color:var(--highlight);
+  }
+  .sub{
+    font-size:1.08rem;
+    color:var(--text-dim);
+    max-width:520px;
+    margin:0 0 36px;
+  }
+  .hero-actions{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:56px;}
+  .btn-primary{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:13.5px;
+    background:var(--highlight);
+    color:var(--ink);
+    border:none;
+    padding:13px 22px;
+    border-radius:999px;
+    cursor:pointer;
+    text-decoration:none;
+    display:inline-flex;align-items:center;gap:8px;
+    transition:transform .15s ease, background .15s ease;
+  }
+  .btn-primary:hover{background:#ffcb5e;transform:translateY(-1px);}
+  .btn-primary:focus-visible{outline:2px solid var(--text);outline-offset:3px;}
+  .btn-ghost{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:13.5px;
+    background:transparent;
+    color:var(--text-dim);
+    border:1px solid var(--line);
+    padding:13px 22px;
+    border-radius:999px;
+    text-decoration:none;
+  }
+  .btn-ghost:hover{border-color:var(--text-dim);color:var(--text);}
+
+  /* SIGNATURE: redline-to-highlight demo */
+  .manuscript{
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    background:var(--ink-2);
+    padding:34px 32px;
+  }
+  .manuscript .tag{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+    color:var(--text-dim);
+    margin-bottom:18px;
+    display:block;
+  }
+  .demo-text{
+    font-family:'Fraunces',serif;
+    font-size:1.28rem;
+    line-height:1.6;
+    color:var(--text-dim);
+  }
+  .demo-text .keep{
+    color:var(--highlight);
+    font-weight:500;
+  }
+  .demo-text .cut{
+    position:relative;
+    transition:opacity .5s ease;
+  }
+  .demo-text .cut::after{
+    content:"";
+    position:absolute;left:-1px;right:-1px;top:52%;
+    height:2px;background:var(--redline);
+    transform:scaleX(0);
+    transform-origin:left;
+    transition:transform .45s ease;
+  }
+  .demo-text .cut.struck{opacity:0.38;}
+  .demo-text .cut.struck::after{transform:scaleX(1);}
+
+  .gist{
+    margin-top:26px;
+    padding-top:22px;
+    border-top:1px dashed var(--line);
+    display:flex;
+    gap:14px;
+    align-items:baseline;
+    opacity:0;
+    transform:translateY(6px);
+    transition:opacity .5s ease, transform .5s ease;
+  }
+  .gist.show{opacity:1;transform:translateY(0);}
+  .gist-label{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    color:var(--highlight);
+    letter-spacing:0.1em;
+    white-space:nowrap;
+  }
+  .gist-text{font-family:'Fraunces',serif;font-style:italic;font-size:1.15rem;color:var(--text);}
+
+  /* MARGINALIA / features */
+  section.notes{
+    padding:70px 0;
+    position:relative;z-index:1;
+  }
+  .notes-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:0;
+    border-top:1px solid var(--line);
+  }
+  .note{
+    padding:26px 22px 26px 0;
+    border-left:1px solid var(--line);
+    padding-left:22px;
+  }
+  .note:first-child{padding-left:0;border-left:none;}
+  .note-label{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+    color:var(--redline);
+    margin-bottom:10px;
+    display:block;
+  }
+  .note h3{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    font-size:1.2rem;
+    margin:0 0 8px;
+  }
+  .note p{margin:0;color:var(--text-dim);font-size:0.94rem;}
+
+  /* TOOL */
+  section.tool{
+    padding:20px 0 90px;
+    position:relative;z-index:1;
+  }
+  .tool-card{
+    background:var(--paper);
+    color:var(--ink);
+    border-radius:20px;
+    padding:38px;
+    box-shadow:0 40px 80px -30px rgba(0,0,0,0.5);
+  }
+  .tool-head{
+    display:flex;justify-content:space-between;align-items:flex-start;
+    margin-bottom:26px;
+    gap:16px;flex-wrap:wrap;
+  }
+  .tool-head h2{
+    font-family:'Fraunces',serif;
+    font-size:1.7rem;
+    margin:0 0 6px;
+  }
+  .tool-head p{margin:0;color:#6b6658;font-size:0.92rem;max-width:380px;}
+  .stamp{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    letter-spacing:0.08em;
+    color:#6b6658;
+    border:1px solid #c9c2ac;
+    padding:6px 10px;
+    border-radius:999px;
+    white-space:nowrap;
+  }
+
+  textarea{
+    width:100%;
+    min-height:180px;
+    padding:16px;
+    border:1px solid #c9c2ac;
+    border-radius:10px;
+    font-family:'Inter',sans-serif;
+    font-size:0.98rem;
+    background:#fbf9f2;
+    color:var(--ink);
+    resize:vertical;
+  }
+  textarea:focus-visible{outline:2px solid var(--redline);outline-offset:1px;}
+
+  .controls{
+    display:flex;gap:12px;margin:16px 0 20px;flex-wrap:wrap;
+  }
+  .field{flex:1;min-width:160px;}
+  .field label{
+    display:block;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    color:#8b8570;
+    margin-bottom:6px;
+  }
+  select{
+    width:100%;
+    padding:11px 12px;
+    border-radius:8px;
+    border:1px solid #c9c2ac;
+    background:#fbf9f2;
+    font-family:'Inter',sans-serif;
+    font-size:0.92rem;
+    color:var(--ink);
+  }
+  select:focus-visible{outline:2px solid var(--redline);outline-offset:1px;}
+
+  .run-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+  button#submitBtn{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:13.5px;
+    background:var(--ink);
+    color:var(--paper);
+    border:none;
+    padding:14px 26px;
+    border-radius:999px;
+    cursor:pointer;
+    transition:transform .15s ease, background .15s ease;
+  }
+  button#submitBtn:hover{background:#000;transform:translateY(-1px);}
+  button#submitBtn:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
+  button#submitBtn:focus-visible{outline:2px solid var(--redline);outline-offset:3px;}
+
+  .char-count{font-family:'IBM Plex Mono',monospace;font-size:11px;color:#9a9482;}
+
+  /* input mode tabs */
+  .input-tabs{
+    display:flex;gap:6px;
+    margin-bottom:14px;
+  }
+  .tab-btn{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12.5px;
+    background:transparent;
+    border:1px solid #c9c2ac;
+    color:#6b6658;
+    padding:8px 14px;
+    border-radius:999px;
+    cursor:pointer;
+    transition:background .15s ease, color .15s ease;
+  }
+  .tab-btn:hover{border-color:var(--redline);color:var(--ink);}
+  .tab-btn.active{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+  .tab-btn:focus-visible{outline:2px solid var(--redline);outline-offset:2px;}
+
+  .tab-panel{margin-bottom:4px;}
+
+  .dropzone{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:6px;
+    min-height:150px;
+    border:1.5px dashed #c9c2ac;
+    border-radius:12px;
+    cursor:pointer;
+    background:#fbf9f2;
+    transition:border-color .15s ease, background .15s ease;
+    text-align:center;
+    padding:20px;
+  }
+  .dropzone:hover, .dropzone.drag-over{border-color:var(--redline);background:#fbf2ec;}
+  .dz-title{font-family:'Inter',sans-serif;font-weight:600;color:var(--ink);font-size:0.98rem;}
+  .dz-sub{font-family:'IBM Plex Mono',monospace;font-size:11px;color:#8b8570;}
+
+  .url-row{display:flex;gap:10px;}
+  .url-row input[type="url"]{
+    flex:1;
+    padding:13px 14px;
+    border:1px solid #c9c2ac;
+    border-radius:8px;
+    background:#fbf9f2;
+    font-family:'Inter',sans-serif;
+    font-size:0.95rem;
+    color:var(--ink);
+  }
+  .url-row input[type="url"]:focus-visible{outline:2px solid var(--redline);outline-offset:1px;}
+  .url-row button{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:13px;
+    background:var(--ink);
+    color:var(--paper);
+    border:none;
+    padding:0 20px;
+    border-radius:8px;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .url-row button:hover{background:#000;}
+  .url-row button:disabled{opacity:0.5;cursor:not-allowed;}
+
+  .extract-status{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11.5px;
+    color:#6b6658;
+    margin-top:8px;
+    min-height:14px;
+  }
+  .extract-status.error{color:#8a2e29;}
+  .extract-status.ok{color:#3d7a3d;}
+
+  #error{
+    margin-top:16px;
+    padding:12px 14px;
+    background:#fbeceb;
+    border:1px solid var(--redline);
+    color:#8a2e29;
+    border-radius:8px;
+    font-size:0.9rem;
+    display:none;
+  }
+  #resultWrap{display:none;margin-top:26px;padding-top:24px;border-top:1px dashed #c9c2ac;}
+  #resultWrap .result-label{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;letter-spacing:0.1em;text-transform:uppercase;
+    color:var(--redline);margin-bottom:10px;display:block;
+  }
+  #result{
+    font-family:'Fraunces',serif;
+    font-size:1.15rem;
+    line-height:1.65;
+    white-space:pre-wrap;
+    color:var(--ink);
+  }
+
+  footer{
+    padding:30px 0 50px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11.5px;
+    color:var(--text-dim);
+    border-top:1px solid var(--line);
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+    position:relative;z-index:1;
+  }
+
+  @media (max-width:720px){
+    .notes-grid{grid-template-columns:1fr;}
+    .note{border-left:none;border-top:1px solid var(--line);padding:22px 0;}
+    .note:first-child{border-top:none;padding-top:0;}
+    .tool-card{padding:26px;}
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto;}
+    .demo-text .cut, .demo-text .cut::after, .gist{transition:none;}
+    body::before{animation:none;}
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="brand" href="#top">
+    <span class="brand-mark"></span>
+    AI SUMMARIZER
+  </a>
+  <a class="cta" href="#tool">Try it →</a>
+</nav>
+
+<div class="wrap">
+  <header class="hero" id="top">
+    <p class="eyebrow">The red pen, automated</p>
+    <h1>Cut the noise.<br>Keep the <em>meaning</em>.</h1>
+    <p class="sub">Paste in anything too long to read twice. Get back only the sentence that mattered — in the length and tone you pick.</p>
+    <div class="hero-actions">
+      <a class="btn-primary" href="#tool">Summarize something ↓</a>
+      <a class="btn-ghost" href="#notes">How it works</a>
+    </div>
+
+    <div class="manuscript" id="demo">
+      <span class="tag">Example edit</span>
+      <p class="demo-text" id="demoText">
+        <span class="cut" data-i="0">Every day the internet produces</span>
+        <span class="keep">an unmanageable flood of text</span><span class="cut" data-i="1">
+        — reports, threads, essays, memos, far more than any one person
+        could actually sit down and read closely —</span>
+        <span class="keep">and most of it says the same thing twice</span><span class="cut" data-i="2">,
+        buried under throat-clearing, caveats, and hedges nobody asked for.</span>
+      </p>
+      <div class="gist" id="gist">
+        <span class="gist-label">THE GIST</span>
+        <span class="gist-text">"An unmanageable flood of text — and most of it says the same thing twice."</span>
+      </div>
+    </div>
+  </header>
+
+  <section class="notes" id="notes">
+    <div class="notes-grid">
+      <div class="note">
+        <span class="note-label">Length</span>
+        <h3>Short, medium, or the whole story</h3>
+        <p>Two sentences for a scan, a full paragraph for context, or a detailed pass that keeps every point.</p>
+      </div>
+      <div class="note">
+        <span class="note-label">Tone</span>
+        <h3>Prose, bullets, or one line</h3>
+        <p>Flowing paragraph for reading, bullets for scanning, a single sentence when that's genuinely all you need.</p>
+      </div>
+      <div class="note">
+        <span class="note-label">Engine</span>
+        <h3>Reads it in seconds</h3>
+        <p>Runs on Gemini under the hood. No opinions added — just what was already in the text, condensed.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="tool" id="tool">
+    <div class="tool-card">
+      <div class="tool-head">
+        <div>
+          <h2>Your turn</h2>
+          <p>Paste your text below. Nothing is stored — it goes straight to the model and back.</p>
+        </div>
+        <span class="stamp">READY</span>
+      </div>
+
+      <div class="input-tabs" role="tablist">
+        <button class="tab-btn active" data-tab="paste" role="tab" aria-selected="true">Paste text</button>
+        <button class="tab-btn" data-tab="file" role="tab" aria-selected="false">Upload file</button>
+        <button class="tab-btn" data-tab="url" role="tab" aria-selected="false">From URL</button>
+      </div>
+
+      <div class="tab-panel" id="panel-paste">
+        <textarea id="inputText" placeholder="Paste an article, an email thread, meeting notes — anything you'd rather not read in full."></textarea>
+      </div>
+
+      <div class="tab-panel" id="panel-file" hidden>
+        <label class="dropzone" for="fileInput" id="dropzone">
+          <input type="file" id="fileInput" accept=".pdf,.docx,.txt,.md" hidden>
+          <span class="dz-title" id="dzTitle">Choose a file</span>
+          <span class="dz-sub">PDF, DOCX, TXT, or MD — up to 10 MB</span>
+        </label>
+        <div class="extract-status" id="fileStatus"></div>
+      </div>
+
+      <div class="tab-panel" id="panel-url" hidden>
+        <div class="url-row">
+          <input type="url" id="urlInput" placeholder="https://example.com/article">
+          <button id="fetchUrlBtn" type="button">Fetch</button>
+        </div>
+        <div class="extract-status" id="urlStatus"></div>
+      </div>
+
+      <div class="controls">
+        <div class="field">
+          <label for="length">Length</label>
+          <select id="length">
+            <option value="short">Short</option>
+            <option value="medium">Medium</option>
+            <option value="detailed">Detailed</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="style">Style</label>
+          <select id="style">
+            <option value="paragraph">Paragraph</option>
+            <option value="bullets">Bullets</option>
+            <option value="one-liner">One-liner</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="run-row">
+        <button id="submitBtn">Summarize</button>
+        <span class="char-count" id="charCount"></span>
+      </div>
+
+      <div id="error"></div>
+      <div id="resultWrap">
+        <span class="result-label">Summary</span>
+        <div id="result"></div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>AI Summarizer — FastAPI · Gemini</span>
+    <span>Built for reading less, knowing more.</span>
+  </footer>
+</div>
+
+<script>
+// --- hero demo animation (redline strike-through -> highlight reveal) ---
+(function(){
+  const demo = document.getElementById('demo');
+  const gist = document.getElementById('gist');
+  const cuts = demo.querySelectorAll('.cut');
+  let played = false;
+
+  function playDemo(){
+    if(played) return;
+    played = true;
+    cuts.forEach((el, idx) => {
+      setTimeout(() => el.classList.add('struck'), 250 + idx * 260);
+    });
+    setTimeout(() => gist.classList.add('show'), 250 + cuts.length * 260 + 200);
+  }
+
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduceMotion){
+    cuts.forEach(el => el.classList.add('struck'));
+    gist.classList.add('show');
+  } else {
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if(e.isIntersecting) playDemo(); });
+    }, { threshold: 0.4 });
+    io.observe(demo);
+  }
+})();
+
+// --- input mode tabs ---
+const tabBtns = document.querySelectorAll(".tab-btn");
+const panels = {
+  paste: document.getElementById("panel-paste"),
+  file: document.getElementById("panel-file"),
+  url: document.getElementById("panel-url"),
+};
+
+tabBtns.forEach(btn => {
+  btn.addEventListener("click", () => {
+    tabBtns.forEach(b => { b.classList.remove("active"); b.setAttribute("aria-selected", "false"); });
+    btn.classList.add("active");
+    btn.setAttribute("aria-selected", "true");
+    Object.entries(panels).forEach(([key, el]) => {
+      el.hidden = key !== btn.dataset.tab;
+    });
+  });
+});
+
+// --- file upload ---
+const fileInput = document.getElementById("fileInput");
+const dropzone = document.getElementById("dropzone");
+const dzTitle = document.getElementById("dzTitle");
+const fileStatus = document.getElementById("fileStatus");
+
+async function handleFile(file) {
+  if (!file) return;
+  dzTitle.textContent = file.name;
+  fileStatus.textContent = "Extracting text…";
+  fileStatus.className = "extract-status";
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  try {
+    const res = await fetch("/extract-file", { method: "POST", body: formData });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Could not read that file.");
+
+    inputText.value = data.text;
+    charCount.textContent = data.chars.toLocaleString() + " characters";
+    fileStatus.textContent = data.truncated
+      ? `Loaded ${data.chars.toLocaleString()} characters (truncated to fit the limit).`
+      : `Loaded ${data.chars.toLocaleString()} characters.`;
+    fileStatus.className = "extract-status ok";
+
+    // switch to the paste tab so the user sees the extracted text
+    document.querySelector('.tab-btn[data-tab="paste"]').click();
+  } catch (err) {
+    fileStatus.textContent = err.message;
+    fileStatus.className = "extract-status error";
+  }
+}
+
+fileInput.addEventListener("change", () => handleFile(fileInput.files[0]));
+
+["dragover", "dragenter"].forEach(evt =>
+  dropzone.addEventListener(evt, (e) => { e.preventDefault(); dropzone.classList.add("drag-over"); })
+);
+["dragleave", "drop"].forEach(evt =>
+  dropzone.addEventListener(evt, (e) => { e.preventDefault(); dropzone.classList.remove("drag-over"); })
+);
+dropzone.addEventListener("drop", (e) => {
+  const file = e.dataTransfer.files[0];
+  if (file) handleFile(file);
+});
+
+// --- URL fetch ---
+const urlInput = document.getElementById("urlInput");
+const fetchUrlBtn = document.getElementById("fetchUrlBtn");
+const urlStatus = document.getElementById("urlStatus");
+
+fetchUrlBtn.addEventListener("click", async () => {
+  const url = urlInput.value.trim();
+  if (!url) {
+    urlStatus.textContent = "Paste a URL first.";
+    urlStatus.className = "extract-status error";
+    return;
+  }
+
+  fetchUrlBtn.disabled = true;
+  fetchUrlBtn.textContent = "Fetching…";
+  urlStatus.textContent = "";
+  urlStatus.className = "extract-status";
+
+  try {
+    const res = await fetch("/extract-url", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Could not fetch that URL.");
+
+    inputText.value = data.text;
+    charCount.textContent = data.chars.toLocaleString() + " characters";
+    urlStatus.textContent = data.truncated
+      ? `Loaded ${data.chars.toLocaleString()} characters (truncated to fit the limit).`
+      : `Loaded ${data.chars.toLocaleString()} characters.`;
+    urlStatus.className = "extract-status ok";
+
+    document.querySelector('.tab-btn[data-tab="paste"]').click();
+  } catch (err) {
+    urlStatus.textContent = err.message;
+    urlStatus.className = "extract-status error";
+  } finally {
+    fetchUrlBtn.disabled = false;
+    fetchUrlBtn.textContent = "Fetch";
+  }
+});
+
+// --- functional summarizer ---
+const submitBtn = document.getElementById("submitBtn");
+const inputText = document.getElementById("inputText");
+const resultWrap = document.getElementById("resultWrap");
+const resultBox = document.getElementById("result");
+const errorBox = document.getElementById("error");
+const charCount = document.getElementById("charCount");
+
+inputText.addEventListener("input", () => {
+  const n = inputText.value.length;
+  charCount.textContent = n > 0 ? n.toLocaleString() + " characters" : "";
+});
+
+submitBtn.addEventListener("click", async () => {
+  const text = inputText.value.trim();
+  errorBox.style.display = "none";
+  resultWrap.style.display = "none";
+
+  if (!text) {
+    errorBox.textContent = "Paste some text first — there's nothing to summarize yet.";
+    errorBox.style.display = "block";
+    return;
+  }
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = "Summarizing…";
+
+  try {
+    const res = await fetch("/summarize", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text: text,
+        length: document.getElementById("length").value,
+        style: document.getElementById("style").value,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.detail || "Something went wrong.");
+    }
+
+    resultBox.textContent = data.summary;
+    resultWrap.style.display = "block";
+  } catch (err) {
+    errorBox.textContent = err.message;
+    errorBox.style.display = "block";
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Summarize";
+  }
+});
+</script>
+</body>
+</html>
