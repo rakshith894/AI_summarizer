@@ -19,6 +19,15 @@ uvicorn main:app --reload
 
 Open **http://127.0.0.1:8000** for the UI, or **http://127.0.0.1:8000/docs** for the interactive API docs.
 
+## Project files
+
+All of these must sit in the same folder — they're your own code, not pip packages, so there's nothing to install for them individually. `pip install -r requirements.txt` installs the *libraries* they depend on (fastapi, openai, pypdf, etc.):
+
+- `main.py` — FastAPI app and routes
+- `prompt.py` — prompt template builder
+- `text_extract.py` — PDF/DOCX/TXT/URL text extraction
+- `static/index.html` — frontend UI
+
 ## Input methods
 
 The UI supports three ways to get text in:

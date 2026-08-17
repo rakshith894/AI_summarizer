@@ -45,7 +45,7 @@ client = (
     else None
 )
 
-MODEL_NAME = "gemini-2.5-flash-lite"
+MODEL_NAME = "gemini-3.5-flash-lite"
 MAX_INPUT_CHARS = 50_000  # guard against runaway costs / huge payloads
 
 app = FastAPI(title="AI Summarizer", version="1.0.0")
